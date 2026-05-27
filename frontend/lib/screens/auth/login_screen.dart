@@ -1,9 +1,70 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import '../main/main_screen.dart';
+import '../../services/auth_service.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+
+  final passwordController = TextEditingController();
+
+  final AuthService authService = AuthService();
+
+  bool isLoading = false;
+
+  bool obscurePassword = true;
+
+  @override
+  void dispose() {
+    emailController.dispose();
+
+    passwordController.dispose();
+
+    super.dispose();
+  }
+
+  Future<void> loginUser() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await authService.login(
+        emailController.text.trim(),
+
+        passwordController.text,
+      );
+
+      if (response["success"]) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Login berhasil")));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(response["message"])));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +123,8 @@ class LoginScreen extends StatelessWidget {
 
                 // EMAIL
                 TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Email',
                     hintText: 'Masukkan email',
@@ -78,13 +141,29 @@ class LoginScreen extends StatelessWidget {
 
                 // PASSWORD
                 TextField(
-                  obscureText: true,
+                  controller: passwordController,
+
+                  obscureText: obscurePassword,
 
                   decoration: InputDecoration(
                     labelText: 'Password',
                     hintText: 'Masukkan password',
 
                     prefixIcon: const Icon(Icons.lock),
+
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          obscurePassword = !obscurePassword;
+                        });
+                      },
+
+                      icon: Icon(
+                        obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                    ),
 
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -100,15 +179,7 @@ class LoginScreen extends StatelessWidget {
                   height: 50,
 
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-
-                        MaterialPageRoute(
-                          builder: (context) => const MainScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: isLoading ? null : loginUser,
 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A58B7),
@@ -120,15 +191,25 @@ class LoginScreen extends StatelessWidget {
 
                     icon: const Icon(Icons.login, color: Colors.white),
 
-                    label: const Text(
-                      'Login',
+                    label: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
 
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Login',
+
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
 
