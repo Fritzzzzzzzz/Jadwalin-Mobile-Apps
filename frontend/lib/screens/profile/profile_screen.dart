@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 
+import 'change_password_screen.dart';
 import '../auth/login_screen.dart';
+import '../../services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,15 +18,217 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String nama = 'Rizqi Firdaus';
+  Map<String, dynamic>? user;
 
-  String email = 'rizqi@student.univ.ac.id';
+  bool isLoading = true;
 
-  String role = 'Mahasiswa';
+  final namaController = TextEditingController();
+
+  final emailController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final data = await AuthService.getProfile();
+
+      setState(() {
+        user = data["user"];
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> logoutUser() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove("token");
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+
+      (route) => false,
+    );
+  }
+
+  Future<void> showEditNamaDialog() async {
+    namaController.text = user?["nama"] ?? "";
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Nama"),
+
+          content: TextField(
+            controller: namaController,
+
+            autofocus: true,
+
+            decoration: const InputDecoration(hintText: "Masukkan nama"),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+
+              child: const Text("Batal"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final nama = namaController.text.trim();
+
+                if (nama.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Nama tidak boleh kosong")),
+                  );
+
+                  return;
+                }
+
+                try {
+                  await AuthService.updateProfile(
+                    namaController.text,
+
+                    user?["email"] ?? "",
+                  );
+
+                  Navigator.pop(context);
+
+                  loadProfile();
+                } catch (e) {}
+              },
+
+              child: const Text("Simpan"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> showEditEmailDialog() async {
+    emailController.text = user?["email"] ?? "";
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Email"),
+
+          content: TextField(
+            controller: emailController,
+
+            autofocus: true,
+
+            keyboardType: TextInputType.emailAddress,
+
+            decoration: const InputDecoration(hintText: "Masukkan email"),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+
+              child: const Text("Batal"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Email tidak boleh kosong")),
+                  );
+
+                  return;
+                }
+
+                final emailRegex = RegExp(
+                  r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$',
+                );
+
+                if (!emailRegex.hasMatch(email)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Format email tidak valid")),
+                  );
+
+                  return;
+                }
+
+                try {
+                  await AuthService.updateProfile(user?["nama"], email);
+
+                  Navigator.pop(context);
+
+                  loadProfile();
+                } catch (e) {}
+              },
+
+              child: const Text("Simpan"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> pilihFoto() async {
+    final picker = ImagePicker();
+
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile == null) return;
+
+    try {
+      await AuthService.uploadFotoProfile(File(pickedFile.path));
+
+      loadProfile();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Foto profil berhasil diperbarui")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
+
       backgroundColor: Colors.white,
 
       appBar: AppBar(
@@ -48,191 +255,225 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
 
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
+          padding: const EdgeInsets.all(16),
 
-              padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
 
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                padding: const EdgeInsets.all(20),
 
-                borderRadius: BorderRadius.circular(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
 
-                border: Border.all(color: const Color(0xFFE0E0E0)),
-              ),
+                  borderRadius: BorderRadius.circular(16),
 
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 48,
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                ),
 
-                    backgroundColor: Colors.grey.shade300,
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: pilihFoto,
 
-                    child: const Icon(
-                      Icons.person,
+                      child: CircleAvatar(
+                        radius: 50,
 
-                      size: 52,
+                        backgroundImage: user?["fotoProfil"] != null
+                            ? NetworkImage(
+                                "http://192.168.1.3:3000/uploads/${user!["fotoProfil"]}",
+                              )
+                            : null,
 
-                      color: Colors.grey,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Text(
-                    nama,
-
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(email, style: GoogleFonts.poppins(color: Colors.grey)),
-
-                  const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-
-                      vertical: 8,
+                        child: user?["fotoProfil"] == null
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
                     ),
 
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A58B7).withOpacity(0.1),
+                    const SizedBox(height: 16),
 
-                      borderRadius: BorderRadius.circular(30),
+                    Text(
+                      user?["nama"] ?? "-",
+
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
 
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 8),
 
-                      children: [
-                        const Icon(
-                          Icons.school,
+                    TextButton.icon(
+                      onPressed: showEditNamaDialog,
 
-                          size: 18,
+                      icon: const Icon(Icons.edit),
 
-                          color: Color(0xFF1A58B7),
-                        ),
-
-                        const SizedBox(width: 8),
-
-                        Text(
-                          role,
-
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFF1A58B7),
-
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                      label: const Text("Edit Nama"),
                     ),
-                  ),
-                ],
-              ),
-            ),
 
-            const Spacer(),
+                    TextButton.icon(
+                      onPressed: showEditEmailDialog,
 
-            SizedBox(
-              width: double.infinity,
+                      icon: const Icon(Icons.email),
 
-              height: 52,
+                      label: const Text("Edit Email"),
+                    ),
 
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
+                    Text(
+                      user?["email"] ?? "-",
 
-                    builder: (context) {
-                      return AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                      style: GoogleFonts.poppins(color: Colors.grey),
+                    ),
 
-                        title: Text(
-                          'Logout?',
+                    const SizedBox(height: 16),
 
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
 
-                        content: Text(
-                          'Apakah yakin ingin keluar akun?',
+                        vertical: 8,
+                      ),
 
-                          style: GoogleFonts.poppins(),
-                        ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A58B7).withOpacity(0.1),
 
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
+                        borderRadius: BorderRadius.circular(30),
+                      ),
 
-                            child: const Text('Batal'),
-                          ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
 
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
+                        children: [
+                          const Icon(Icons.school, color: Color(0xFF1A58B7)),
 
-                              Navigator.pushAndRemoveUntil(
-                                context,
+                          const SizedBox(width: 8),
 
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginScreen(),
-                                ),
+                          Text(
+                            user?["role"] ?? "-",
 
-                                (route) => false,
-                              );
-                            },
-
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-
-                              foregroundColor: Colors.white,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF1A58B7),
                             ),
-
-                            child: const Text('Logout'),
                           ),
                         ],
-                      );
-                    },
-                  );
-                },
-
-                icon: const Icon(Icons.logout),
-
-                label: Text(
-                  'Logout',
-
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
 
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
+              const SizedBox(height: 24),
 
-                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+              SizedBox(
+                width: double.infinity,
 
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                height: 55,
+
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return const ChangePasswordScreen();
+                        },
+                      ),
+                    );
+                  },
+
+                  icon: const Icon(Icons.lock_reset),
+
+                  label: const Text("Ganti Password"),
+
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1A58B7),
+
+                    side: const BorderSide(color: Color(0xFF1A58B7)),
+
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+
+                height: 52,
+
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text("Logout"),
+
+                          content: const Text("Yakin ingin keluar akun?"),
+
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+
+                              child: const Text("Batal"),
+                            ),
+
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+
+                                logoutUser();
+                              },
+
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+
+                              child: const Text("Logout"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+
+                  icon: const Icon(Icons.logout),
+
+                  label: Text(
+                    "Logout",
+
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE53935),
+
+                    foregroundColor: Colors.white,
+
+                    elevation: 2,
+
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
