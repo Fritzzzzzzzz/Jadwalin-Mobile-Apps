@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/matkul_model.dart';
+import '../../services/matkul_service.dart';
 
 class TambahMatkulScreen extends StatefulWidget {
   const TambahMatkulScreen({super.key});
@@ -17,6 +18,8 @@ class _TambahMatkulScreenState extends State<TambahMatkulScreen> {
 
   String? selectedSemester;
 
+  bool isLoading = false;
+
   final List<String> daftarSemester = [
     'Semester 1',
     'Semester 2',
@@ -27,6 +30,52 @@ class _TambahMatkulScreenState extends State<TambahMatkulScreen> {
     'Semester 7',
     'Semester 8',
   ];
+
+  Future<void> tambahMatkul() async {
+    if (namaMatkulController.text.isEmpty ||
+        dosenController.text.isEmpty ||
+        selectedSemester == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Semua field wajib diisi")));
+
+      return;
+    }
+
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final matkul = MatkulModel(
+        nama: namaMatkulController.text,
+
+        dosen: dosenController.text,
+
+        semester: selectedSemester!,
+      );
+
+      await MatkulService().tambahMatkul(matkul);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mata kuliah berhasil ditambahkan")),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -240,25 +289,33 @@ class _TambahMatkulScreenState extends State<TambahMatkulScreen> {
                 height: 52,
 
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    final matkulBaru = MatkulModel(
-                      nama: namaMatkulController.text,
-
-                      dosen: dosenController.text,
-
-                      semester: selectedSemester!,
-                    );
-
-                    Navigator.pop(context, matkulBaru);
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          tambahMatkul();
+                        },
 
                   icon: const Icon(Icons.save),
 
-                  label: Text(
-                    'Simpan Mata Kuliah',
+                  label: isLoading
+                      ? const SizedBox(
+                          width: 20,
 
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  ),
+                          height: 20,
+
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Simpan Mata Kuliah',
+
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A58B7),

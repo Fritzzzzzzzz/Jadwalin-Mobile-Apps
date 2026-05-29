@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/matkul_model.dart';
+import '../../services/matkul_service.dart';
 
 class EditMatkulScreen extends StatefulWidget {
   final MatkulModel matkul;
@@ -13,15 +14,24 @@ class EditMatkulScreen extends StatefulWidget {
 }
 
 class _EditMatkulScreenState extends State<EditMatkulScreen> {
-  final TextEditingController namaMatkulController = TextEditingController(
-    text: 'Pemrograman Mobile',
-  );
+  late TextEditingController namaMatkulController;
 
-  final TextEditingController dosenController = TextEditingController(
-    text: 'Dr. Aris Sudarsono',
-  );
+  late TextEditingController dosenController;
 
-  String selectedSemester = 'Semester 4';
+  String? selectedSemester;
+
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    namaMatkulController = TextEditingController(text: widget.matkul.nama);
+
+    dosenController = TextEditingController(text: widget.matkul.dosen);
+
+    selectedSemester = widget.matkul.semester;
+  }
 
   final List<String> daftarSemester = [
     'Semester 1',
@@ -33,6 +43,54 @@ class _EditMatkulScreenState extends State<EditMatkulScreen> {
     'Semester 7',
     'Semester 8',
   ];
+
+  Future<void> editMatkul() async {
+    if (namaMatkulController.text.isEmpty ||
+        dosenController.text.isEmpty ||
+        selectedSemester == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Semua field wajib diisi")));
+
+      return;
+    }
+
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final matkul = MatkulModel(
+        id: widget.matkul.id,
+
+        nama: namaMatkulController.text,
+
+        dosen: dosenController.text,
+
+        semester: selectedSemester!,
+      );
+
+      await MatkulService().editMatkul(matkul);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mata kuliah berhasil diperbarui")),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,25 +226,33 @@ class _EditMatkulScreenState extends State<EditMatkulScreen> {
                 height: 52,
 
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    final updatedMatkul = MatkulModel(
-                      nama: namaMatkulController.text,
-
-                      dosen: dosenController.text,
-
-                      semester: selectedSemester,
-                    );
-
-                    Navigator.pop(context, updatedMatkul);
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          editMatkul();
+                        },
 
                   icon: const Icon(Icons.save),
 
-                  label: Text(
-                    'Simpan Perubahan',
+                  label: isLoading
+                      ? const SizedBox(
+                          width: 20,
 
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  ),
+                          height: 20,
+
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Simpan Perubahan',
+
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A58B7),
