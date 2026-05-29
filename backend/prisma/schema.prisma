@@ -16,9 +16,51 @@ model user {
   fotoProfil String?
   role       user_role @default(mahasiswa)
   createdAt  DateTime  @default(now())
+  jadwal Jadwal[]
+  matkul Matkul[]
 }
 
 enum user_role {
   admin
   mahasiswa
+}
+
+model Jadwal {
+
+  id           Int      @id @default(autoincrement())
+
+  namaMatkul   String
+
+  hari         String
+
+  jamMulai     String
+
+  jamSelesai   String
+
+  ruangan      String
+
+  createdAt    DateTime @default(now())
+
+  userId       Int
+
+  user         user @relation(fields: [userId], references: [id])
+
+}
+
+model Matkul {
+
+  id         Int      @id @default(autoincrement())
+
+  nama       String
+
+  dosen      String
+
+  semester   String
+
+  createdAt  DateTime @default(now())
+
+  userId     Int
+
+  user       user @relation(fields: [userId], references: [id])
+
 }
