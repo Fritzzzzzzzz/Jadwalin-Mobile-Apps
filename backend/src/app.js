@@ -17,6 +17,16 @@ const userRoute =
         "./routes/user.route"
     );
 
+const jadwalRoute =
+    require(
+        "./routes/jadwal.route"
+    );
+
+const matkulRoute =
+    require(
+        "./routes/matkul.route"
+    );
+
 const path =
     require(
         "path"
@@ -47,6 +57,20 @@ app.use(
     userRoute
 
 );
+
+app.use(
+
+    "/api/jadwal",
+
+    jadwalRoute
+
+);
+
+app.use(
+    "/api/matkul",
+    matkulRoute,
+);
+
 
 app.get(
 
