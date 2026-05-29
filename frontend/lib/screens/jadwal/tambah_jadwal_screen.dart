@@ -1,9 +1,11 @@
-import 'package:Jadwalin/screens/jadwal/jadwal_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../matkul/tambah_matkul_screen.dart';
+import '../../models/matkul_model.dart';
 import '../../models/jadwal_model.dart';
+import '../../services/jadwal_service.dart';
+import '../../services/matkul_service.dart';
 
 class TambahJadwalScreen extends StatefulWidget {
   const TambahJadwalScreen({super.key});
@@ -16,11 +18,11 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
   String? selectedMatkul;
   String? selectedHari;
 
-  final List<String> daftarMatkul = [
-    'Pemrograman Mobile',
-    'Basis Data',
-    'Struktur Data',
-  ];
+  bool isLoading = false;
+
+  List<MatkulModel> daftarMatkul = [];
+
+  bool isLoadingMatkul = true;
 
   final List<String> daftarHari = [
     'Senin',
@@ -31,13 +33,38 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
     'Sabtu',
   ];
 
-  final TextEditingController dosenController = TextEditingController();
-
   final TextEditingController ruanganController = TextEditingController();
 
   final TextEditingController jamMulaiController = TextEditingController();
 
   final TextEditingController jamSelesaiController = TextEditingController();
+
+  Future<void> getMatkul() async {
+    try {
+      final result = await MatkulService().getMatkul();
+
+      setState(() {
+        daftarMatkul = result;
+
+        isLoadingMatkul = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingMatkul = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    getMatkul();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +237,8 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                               ],
                             ),
                           )
+                        : isLoadingMatkul
+                        ? const Center(child: CircularProgressIndicator())
                         // DROPDOWN MATKUL
                         : DropdownButtonFormField<String>(
                             value: selectedMatkul,
@@ -219,15 +248,13 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                               icon: Icons.book,
                             ),
 
-                            items: daftarMatkul
-                                .map(
-                                  (matkul) => DropdownMenuItem(
-                                    value: matkul,
+                            items: daftarMatkul.map((matkul) {
+                              return DropdownMenuItem<String>(
+                                value: matkul.nama,
 
-                                    child: Text(matkul),
-                                  ),
-                                )
-                                .toList(),
+                                child: Text(matkul.nama),
+                              );
+                            }).toList(),
 
                             onChanged: (value) {
                               setState(() {
@@ -292,9 +319,9 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                                       );
 
                                   if (picked != null) {
-                                    jamMulaiController.text = picked.format(
-                                      context,
-                                    );
+                                    jamMulaiController.text =
+                                        "${picked.hour.toString().padLeft(2, '0')}:"
+                                        "${picked.minute.toString().padLeft(2, '0')}";
 
                                     setState(() {});
                                   }
@@ -336,9 +363,9 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                                       );
 
                                   if (picked != null) {
-                                    jamSelesaiController.text = picked.format(
-                                      context,
-                                    );
+                                    jamSelesaiController.text =
+                                        "${picked.hour.toString().padLeft(2, '0')}:"
+                                        "${picked.minute.toString().padLeft(2, '0')}";
 
                                     setState(() {});
                                   }
@@ -386,31 +413,90 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                       height: 52,
 
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          final jadwalBaru = JadwalModel(
-                            namaMatkul: selectedMatkul!,
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                if (selectedMatkul == null ||
+                                    selectedHari == null ||
+                                    jamMulaiController.text.isEmpty ||
+                                    jamSelesaiController.text.isEmpty ||
+                                    ruanganController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Semua field wajib diisi"),
+                                    ),
+                                  );
 
-                            hari: selectedHari!,
+                                  return;
+                                }
 
-                            jamMulai: jamMulaiController.text,
+                                try {
+                                  setState(() {
+                                    isLoading = true;
+                                  });
 
-                            jamSelesai: jamSelesaiController.text,
+                                  await JadwalService().tambahJadwal(
+                                    JadwalModel(
+                                      namaMatkul: selectedMatkul!,
 
-                            ruangan: ruanganController.text,
-                          );
+                                      hari: selectedHari!,
 
-                          Navigator.pop(context, jadwalBaru);
-                        },
+                                      jamMulai: jamMulaiController.text,
+
+                                      jamSelesai: jamSelesaiController.text,
+
+                                      ruangan: ruanganController.text,
+                                    ),
+                                  );
+
+                                  if (!mounted) return;
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Jadwal berhasil ditambahkan",
+                                      ),
+                                    ),
+                                  );
+
+                                  Navigator.pop(context, true);
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceFirst(
+                                          "Exception: ",
+                                          "",
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                } finally {
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                }
+                              },
 
                         icon: const Icon(Icons.save),
 
-                        label: Text(
-                          'Simpan',
+                        label: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
 
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Simpan',
+
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
 
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A58B7),
@@ -483,5 +569,16 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
         borderSide: const BorderSide(color: Color(0xFF1A58B7)),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    ruanganController.dispose();
+
+    jamMulaiController.dispose();
+
+    jamSelesaiController.dispose();
+
+    super.dispose();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/jadwal_model.dart';
+import '../../services/jadwal_service.dart';
 
 class EditJadwalScreen extends StatefulWidget {
   final JadwalModel jadwal;
@@ -15,6 +16,8 @@ class EditJadwalScreen extends StatefulWidget {
 class _EditJadwalScreenState extends State<EditJadwalScreen> {
   String? selectedMatkul;
   String? selectedHari;
+
+  bool isLoading = false;
 
   final List<String> daftarMatkul = [
     'Pemrograman Mobile',
@@ -221,7 +224,9 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
                             );
 
                             if (picked != null) {
-                              jamMulaiController.text = picked.format(context);
+                              jamMulaiController.text =
+                                  "${picked.hour.toString().padLeft(2, '0')}:"
+                                  "${picked.minute.toString().padLeft(2, '0')}";
 
                               setState(() {});
                             }
@@ -264,9 +269,9 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
                             );
 
                             if (picked != null) {
-                              jamSelesaiController.text = picked.format(
-                                context,
-                              );
+                              jamSelesaiController.text =
+                                  "${picked.hour.toString().padLeft(2, '0')}:"
+                                  "${picked.minute.toString().padLeft(2, '0')}";
 
                               setState(() {});
                             }
@@ -315,31 +320,67 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
                 height: 52,
 
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (selectedMatkul == null || selectedHari == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Lengkapi data terlebih dahulu'),
-                        ),
-                      );
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (selectedMatkul == null ||
+                              selectedHari == null ||
+                              jamMulaiController.text.isEmpty ||
+                              jamSelesaiController.text.isEmpty ||
+                              ruanganController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Lengkapi data terlebih dahulu'),
+                              ),
+                            );
 
-                      return;
-                    }
+                            return;
+                          }
 
-                    final updatedJadwal = JadwalModel(
-                      namaMatkul: selectedMatkul!,
+                          try {
+                            setState(() {
+                              isLoading = true;
+                            });
 
-                      hari: selectedHari!,
+                            await JadwalService().editJadwal(
+                              JadwalModel(
+                                id: widget.jadwal.id,
 
-                      jamMulai: jamMulaiController.text,
+                                namaMatkul: selectedMatkul!,
 
-                      jamSelesai: jamSelesaiController.text,
+                                hari: selectedHari!,
 
-                      ruangan: ruanganController.text,
-                    );
+                                jamMulai: jamMulaiController.text,
 
-                    Navigator.pop(context, updatedJadwal);
-                  },
+                                jamSelesai: jamSelesaiController.text,
+
+                                ruangan: ruanganController.text,
+                              ),
+                            );
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Jadwal berhasil diperbarui"),
+                              ),
+                            );
+
+                            Navigator.pop(context, true);
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceFirst("Exception: ", ""),
+                                ),
+                              ),
+                            );
+                          } finally {
+                            setState(() {
+                              isLoading = false;
+                            });
+                          }
+                        },
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A58B7),
@@ -353,11 +394,23 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
 
                   icon: const Icon(Icons.save),
 
-                  label: Text(
-                    'Simpan Perubahan',
+                  label: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
 
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  ),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Simpan Perubahan',
+
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
 
@@ -409,5 +462,16 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
         borderSide: const BorderSide(color: Color(0xFF1A58B7), width: 1.5),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    jamMulaiController.dispose();
+
+    jamSelesaiController.dispose();
+
+    ruanganController.dispose();
+
+    super.dispose();
   }
 }

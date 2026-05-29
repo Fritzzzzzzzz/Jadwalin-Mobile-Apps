@@ -5,6 +5,7 @@ import 'tambah_jadwal_screen.dart';
 import 'edit_jadwal_screen.dart';
 import '../matkul/matkul_screen.dart';
 import '../../models/jadwal_model.dart';
+import '../../services/jadwal_service.dart';
 
 class JadwalScreen extends StatefulWidget {
   const JadwalScreen({super.key});
@@ -14,18 +15,26 @@ class JadwalScreen extends StatefulWidget {
 }
 
 class _JadwalScreenState extends State<JadwalScreen> {
-  List<JadwalModel> daftarJadwal = [
-    JadwalModel(
-      namaMatkul: 'Pemrograman Mobile',
-      hari: 'Senin',
-      jamMulai: '08:00',
-      jamSelesai: '10:00',
-      ruangan: 'Lab Komputer 1',
-    ),
-  ];
+  List<JadwalModel> daftarJadwal = [];
+
+  String selectedFilter = 'Semua';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    getJadwal();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filteredJadwal = selectedFilter == 'Semua'
+        ? daftarJadwal
+        : daftarJadwal.where((jadwal) {
+            return jadwal.hari == selectedFilter;
+          }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -50,18 +59,6 @@ class _JadwalScreenState extends State<JadwalScreen> {
         ),
 
         actions: [
-          IconButton(
-            onPressed: () {},
-
-            icon: const Icon(Icons.search, color: Colors.black87),
-          ),
-
-          IconButton(
-            onPressed: () {},
-
-            icon: const Icon(Icons.notifications_none, color: Colors.black87),
-          ),
-
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.black87),
 
@@ -112,10 +109,8 @@ class _JadwalScreenState extends State<JadwalScreen> {
             MaterialPageRoute(builder: (context) => const TambahJadwalScreen()),
           );
 
-          if (result != null && result is JadwalModel) {
-            setState(() {
-              daftarJadwal.add(result);
-            });
+          if (result == true) {
+            getJadwal();
           }
         },
 
@@ -156,8 +151,7 @@ class _JadwalScreenState extends State<JadwalScreen> {
 
                 child: Row(
                   children: [
-                    _buildFilterChip(label: 'Semua', isActive: true),
-
+                    _buildFilterChip(label: 'Semua'),
                     _buildFilterChip(label: 'Senin'),
                     _buildFilterChip(label: 'Selasa'),
                     _buildFilterChip(label: 'Rabu'),
@@ -170,11 +164,11 @@ class _JadwalScreenState extends State<JadwalScreen> {
 
               const SizedBox(height: 32),
 
-              // EMPTY STATE
               // EMPTY STATE / LIST JADWAL
               Expanded(
-                child: daftarJadwal.isEmpty
-                    // EMPTY STATE
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : filteredJadwal.isEmpty
                     ? Center(
                         child: Container(
                           width: double.infinity,
@@ -199,7 +193,9 @@ class _JadwalScreenState extends State<JadwalScreen> {
                               const SizedBox(height: 16),
 
                               Text(
-                                'Belum Ada Jadwal',
+                                selectedFilter == 'Semua'
+                                    ? 'Belum Ada Jadwal'
+                                    : 'Tidak Ada Jadwal $selectedFilter',
 
                                 style: GoogleFonts.poppins(
                                   fontSize: 18,
@@ -210,7 +206,9 @@ class _JadwalScreenState extends State<JadwalScreen> {
                               const SizedBox(height: 8),
 
                               Text(
-                                'Tambahkan jadwal kuliah untuk mulai mengatur aktivitas perkuliahan.',
+                                selectedFilter == 'Semua'
+                                    ? 'Tambahkan jadwal kuliah untuk mulai mengatur aktivitas perkuliahan.'
+                                    : 'Belum ada jadwal untuk hari $selectedFilter.',
 
                                 textAlign: TextAlign.center,
 
@@ -226,7 +224,7 @@ class _JadwalScreenState extends State<JadwalScreen> {
                     // LIST JADWAL
                     : ListView(
                         children: [
-                          ...daftarJadwal.map((jadwal) {
+                          ...filteredJadwal.map((jadwal) {
                             return Container(
                               width: double.infinity,
 
@@ -332,14 +330,8 @@ class _JadwalScreenState extends State<JadwalScreen> {
                                             ),
                                           );
 
-                                          if (result != null &&
-                                              result is JadwalModel) {
-                                            setState(() {
-                                              final index = daftarJadwal
-                                                  .indexOf(jadwal);
-
-                                              daftarJadwal[index] = result;
-                                            });
+                                          if (result == true) {
+                                            getJadwal();
                                           }
                                         },
 
@@ -395,14 +387,46 @@ class _JadwalScreenState extends State<JadwalScreen> {
                                                   ),
 
                                                   ElevatedButton(
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        daftarJadwal.remove(
-                                                          jadwal,
-                                                        );
-                                                      });
+                                                    onPressed: () async {
+                                                      try {
+                                                        await JadwalService()
+                                                            .hapusJadwal(
+                                                              jadwal.id!,
+                                                            );
 
-                                                      Navigator.pop(context);
+                                                        if (!mounted) return;
+
+                                                        Navigator.pop(context);
+
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              "Jadwal berhasil dihapus",
+                                                            ),
+                                                          ),
+                                                        );
+
+                                                        getJadwal();
+                                                      } catch (e) {
+                                                        Navigator.pop(context);
+
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              e
+                                                                  .toString()
+                                                                  .replaceFirst(
+                                                                    "Exception: ",
+                                                                    "",
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
                                                     },
 
                                                     style:
@@ -448,33 +472,67 @@ class _JadwalScreenState extends State<JadwalScreen> {
     );
   }
 
+  Future<void> getJadwal() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final jadwal = await JadwalService().getJadwal();
+
+      setState(() {
+        daftarJadwal = jadwal;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   // FILTER CHIP
-  Widget _buildFilterChip({required String label, bool isActive = false}) {
+  Widget _buildFilterChip({required String label}) {
+    final bool isActive = selectedFilter == label;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
 
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            selectedFilter = label;
+          });
+        },
 
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF1A58B7) : const Color(0xFFF5F5F5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
 
-          borderRadius: BorderRadius.circular(30),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF1A58B7) : const Color(0xFFF5F5F5),
 
-          border: Border.all(
-            color: isActive ? const Color(0xFF1A58B7) : const Color(0xFFE0E0E0),
+            borderRadius: BorderRadius.circular(30),
+
+            border: Border.all(
+              color: isActive
+                  ? const Color(0xFF1A58B7)
+                  : const Color(0xFFE0E0E0),
+            ),
           ),
-        ),
 
-        child: Text(
-          label,
+          child: Text(
+            label,
 
-          style: GoogleFonts.poppins(
-            fontSize: 12,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
 
-            color: isActive ? Colors.white : Colors.black87,
+              color: isActive ? Colors.white : Colors.black87,
 
-            fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
