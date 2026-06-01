@@ -113,7 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(context);
 
                   loadProfile();
-                } catch (e) {}
+                } catch (e) {
+                  debugPrint(e.toString());
+                }
               },
 
               child: const Text("Simpan"),
@@ -183,7 +185,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(context);
 
                   loadProfile();
-                } catch (e) {}
+                } catch (e) {
+                  debugPrint(e.toString());
+                }
               },
 
               child: const Text("Simpan"),
