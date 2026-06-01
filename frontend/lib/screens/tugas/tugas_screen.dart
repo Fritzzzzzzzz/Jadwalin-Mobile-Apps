@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/tugas_model.dart';
 import 'tambah_tugas_screen.dart';
 import 'edit_tugas_screen.dart';
+import '../../services/tugas_service.dart';
 
 class TugasScreen extends StatefulWidget {
   const TugasScreen({super.key});
@@ -13,20 +14,15 @@ class TugasScreen extends StatefulWidget {
 }
 
 class _TugasScreenState extends State<TugasScreen> {
-  List<TugasModel> daftarTugas = [
-    TugasModel(
-      matkul: 'Pemrograman Mobile',
+  List<TugasModel> daftarTugas = [];
+  bool isLoading = true;
 
-      judul: 'Project Akhir Semester',
+  @override
+  void initState() {
+    super.initState();
 
-      deskripsi:
-          'Buat aplikasi Flutter CRUD dengan autentikasi login dan backend.',
-
-      deadline: '25/05/2026',
-
-      status: 'Belum Selesai',
-    ),
-  ];
+    getTugas();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,10 +75,8 @@ class _TugasScreenState extends State<TugasScreen> {
             MaterialPageRoute(builder: (_) => const TambahTugasScreen()),
           );
 
-          if (tugasBaru != null) {
-            setState(() {
-              daftarTugas.add(tugasBaru);
-            });
+          if (tugasBaru == true) {
+            getTugas();
           }
         },
 
@@ -137,7 +131,9 @@ class _TugasScreenState extends State<TugasScreen> {
             const SizedBox(height: 20),
 
             Expanded(
-              child: daftarTugas.isEmpty
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : daftarTugas.isEmpty
                   ? Center(
                       child: Container(
                         width: double.infinity,
@@ -231,7 +227,7 @@ class _TugasScreenState extends State<TugasScreen> {
                                     ),
 
                                     child: Text(
-                                      tugas.matkul,
+                                      tugas.namaMatkul,
 
                                       style: GoogleFonts.poppins(fontSize: 12),
                                     ),
@@ -325,14 +321,8 @@ class _TugasScreenState extends State<TugasScreen> {
                                         ),
                                       );
 
-                                      if (result != null) {
-                                        setState(() {
-                                          final index = daftarTugas.indexOf(
-                                            tugas,
-                                          );
-
-                                          daftarTugas[index] = result;
-                                        });
+                                      if (result == true) {
+                                        getTugas();
                                       }
                                     },
 
@@ -430,5 +420,27 @@ class _TugasScreenState extends State<TugasScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> getTugas() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final tugas = await TugasService().getTugas();
+
+      setState(() {
+        daftarTugas = tugas;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }

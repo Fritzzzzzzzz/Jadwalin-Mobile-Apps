@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/tugas_model.dart';
+import '../../models/matkul_model.dart';
+import '../../services/tugas_service.dart';
+import '../../services/matkul_service.dart';
 
 class EditTugasScreen extends StatefulWidget {
   final TugasModel tugas;
@@ -17,17 +20,15 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
 
   late TextEditingController deskripsiController;
 
-  String? selectedMatkul;
+  MatkulModel? selectedMatkul;
+
+  bool isLoadingMatkul = true;
 
   String selectedStatus = 'Belum Selesai';
 
   DateTime? selectedDeadline;
 
-  final List<String> daftarMatkul = [
-    'Pemrograman Mobile',
-    'Basis Data',
-    'Struktur Data',
-  ];
+  List<MatkulModel> daftarMatkul = [];
 
   final List<String> daftarStatus = ['Belum Selesai', 'Selesai'];
 
@@ -39,7 +40,7 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
 
     deskripsiController = TextEditingController(text: widget.tugas.deskripsi);
 
-    selectedMatkul = widget.tugas.matkul;
+    getMatkul();
 
     selectedStatus = widget.tugas.status;
 
@@ -53,6 +54,28 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
     deskripsiController.dispose();
 
     super.dispose();
+  }
+
+  Future<void> getMatkul() async {
+    try {
+      final matkul = await MatkulService().getMatkul();
+
+      setState(() {
+        daftarMatkul = matkul;
+
+        selectedMatkul = matkul.firstWhere(
+          (e) => e.id == widget.tugas.matkulId,
+        );
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() {
+        isLoadingMatkul = false;
+      });
+    }
   }
 
   Future pilihTanggal() async {
@@ -83,26 +106,38 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
         '${selectedDeadline!.year}';
   }
 
-  void simpan() {
-    if (selectedMatkul == null) {
-      return;
+  Future<void> simpan() async {
+    if (selectedMatkul == null) return;
+
+    try {
+      final tugas = TugasModel(
+        id: widget.tugas.id,
+
+        matkulId: selectedMatkul!.id!,
+
+        namaMatkul: selectedMatkul!.nama,
+
+        judul: judulController.text,
+
+        deskripsi: deskripsiController.text.trim().isEmpty
+            ? null
+            : deskripsiController.text,
+
+        deadline: deadlineText,
+
+        status: selectedStatus,
+      );
+
+      await TugasService().editTugas(tugas);
+
+      if (!mounted) return;
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
     }
-
-    final result = TugasModel(
-      matkul: selectedMatkul!,
-
-      judul: judulController.text,
-
-      deskripsi: deskripsiController.text.trim().isEmpty
-          ? null
-          : deskripsiController.text,
-
-      deadline: deadlineText,
-
-      status: selectedStatus,
-    );
-
-    Navigator.pop(context, result);
   }
 
   @override
@@ -154,21 +189,27 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
 
               const SizedBox(height: 16),
 
-              DropdownButtonFormField(
-                value: selectedMatkul,
+              isLoadingMatkul
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<MatkulModel>(
+                      value: selectedMatkul,
 
-                decoration: input('Mata Kuliah', Icons.book),
+                      decoration: input('Mata Kuliah', Icons.book),
 
-                items: daftarMatkul.map((e) {
-                  return DropdownMenuItem(value: e, child: Text(e));
-                }).toList(),
+                      items: daftarMatkul.map((matkul) {
+                        return DropdownMenuItem(
+                          value: matkul,
 
-                onChanged: (v) {
-                  setState(() {
-                    selectedMatkul = v;
-                  });
-                },
-              ),
+                          child: Text(matkul.nama),
+                        );
+                      }).toList(),
+
+                      onChanged: (value) {
+                        setState(() {
+                          selectedMatkul = value;
+                        });
+                      },
+                    ),
 
               const SizedBox(height: 16),
 
