@@ -27,6 +27,11 @@ const matkulRoute =
         "./routes/matkul.route"
     );
 
+const tugasRoute =
+    require(
+        "./routes/tugas.route"
+    );
+
 const path =
     require(
         "path"
@@ -71,6 +76,10 @@ app.use(
     matkulRoute,
 );
 
+app.use(
+    "/api/tugas",
+    tugasRoute,
+);
 
 app.get(
 
