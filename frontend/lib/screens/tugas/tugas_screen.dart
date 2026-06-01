@@ -17,11 +17,21 @@ class _TugasScreenState extends State<TugasScreen> {
   List<TugasModel> daftarTugas = [];
   bool isLoading = true;
 
+  String filterStatus = 'Semua';
+
   @override
   void initState() {
     super.initState();
 
     getTugas();
+  }
+
+  List<TugasModel> get tugasFiltered {
+    if (filterStatus == 'Semua') {
+      return daftarTugas;
+    }
+
+    return daftarTugas.where((tugas) => tugas.status == filterStatus).toList();
   }
 
   @override
@@ -55,14 +65,6 @@ class _TugasScreenState extends State<TugasScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-
-        actions: [
-          IconButton(
-            onPressed: () {},
-
-            icon: const Icon(Icons.search, color: Colors.black87),
-          ),
-        ],
       ),
 
       floatingActionButton: FloatingActionButton(
@@ -119,7 +121,45 @@ class _TugasScreenState extends State<TugasScreen> {
                 ),
 
                 TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              title: const Text('Semua'),
+                              onTap: () {
+                                setState(() {
+                                  filterStatus = 'Semua';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                            ListTile(
+                              title: const Text('Belum Selesai'),
+                              onTap: () {
+                                setState(() {
+                                  filterStatus = 'Belum Selesai';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                            ListTile(
+                              title: const Text('Selesai'),
+                              onTap: () {
+                                setState(() {
+                                  filterStatus = 'Selesai';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
 
                   icon: const Icon(Icons.filter_list),
 
@@ -133,7 +173,7 @@ class _TugasScreenState extends State<TugasScreen> {
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : daftarTugas.isEmpty
+                  : tugasFiltered.isEmpty
                   ? Center(
                       child: Container(
                         width: double.infinity,
@@ -188,7 +228,7 @@ class _TugasScreenState extends State<TugasScreen> {
                       ),
                     )
                   : ListView(
-                      children: daftarTugas.map((tugas) {
+                      children: tugasFiltered.map((tugas) {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
 
