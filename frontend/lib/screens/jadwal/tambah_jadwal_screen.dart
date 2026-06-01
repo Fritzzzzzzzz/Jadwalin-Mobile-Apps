@@ -241,6 +241,7 @@ class _TambahJadwalScreenState extends State<TambahJadwalScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         // DROPDOWN MATKUL
                         : DropdownButtonFormField<String>(
+                            isExpanded: true,
                             value: selectedMatkul,
 
                             decoration: _inputDecoration(
