@@ -204,6 +204,7 @@ class _TambahTugasScreenState extends State<TambahTugasScreen> {
               isLoadingMatkul
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<MatkulModel>(
+                      isExpanded: true,
                       value: selectedMatkul,
 
                       decoration: inputDecoration('Mata Kuliah', Icons.book),
