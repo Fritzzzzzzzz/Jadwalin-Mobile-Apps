@@ -1,220 +1,374 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../jadwal/jadwal_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+import '../../services/auth_service.dart';
+import '../../services/jadwal_service.dart';
+import '../../services/tugas_service.dart';
+import '../../models/jadwal_model.dart';
+import '../../models/tugas_model.dart';
+
+class DashboardScreen extends StatefulWidget {
   final Function(int) onTabChange;
 
   const DashboardScreen({super.key, required this.onTabChange});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  List<JadwalModel> daftarJadwal = [];
+
+  List<TugasModel> daftarTugas = [];
+
+  bool isLoading = true;
+
+  String namaUser = '';
+
+  String? fotoProfil;
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadDashboard();
+
+    loadProfile();
+  }
+
+  Future<void> loadDashboard() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final jadwal = await JadwalService().getJadwal();
+
+      final tugas = await TugasService().getTugas();
+
+      setState(() {
+        daftarJadwal = jadwal;
+
+        daftarTugas = tugas;
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final profile = await AuthService.getProfile();
+
+      setState(() {
+        namaUser = profile["user"]["nama"];
+
+        fotoProfil = profile["user"]["fotoProfil"];
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  String getHariSekarang() {
+    final hari = DateTime.now().weekday;
+
+    switch (hari) {
+      case 1:
+        return 'Senin';
+      case 2:
+        return 'Selasa';
+      case 3:
+        return 'Rabu';
+      case 4:
+        return 'Kamis';
+      case 5:
+        return 'Jumat';
+      case 6:
+        return 'Sabtu';
+      default:
+        return 'Minggu';
+    }
+  }
+
+  List<JadwalModel> get jadwalHariIni {
+    return daftarJadwal.where((e) => e.hari == getHariSekarang()).toList();
+  }
+
+  List<TugasModel> get tugasBelumSelesai {
+    return daftarTugas.where((e) => e.status == 'Belum Selesai').toList();
+  }
+
+  List<TugasModel> get deadlineTerdekat {
+    final list = [...tugasBelumSelesai];
+
+    list.sort(
+      (a, b) =>
+          DateTime.parse(a.deadline).compareTo(DateTime.parse(b.deadline)),
+    );
+
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-
-            children: [
-              // HEADER
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
-                    children: [
-                      Text(
-                        'Selamat Datang,',
-
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-
-                      Text(
-                        'Rizqi Firdaus',
-
-                        style: GoogleFonts.poppins(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1A58B7),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Color(0xFFE0E0E0),
-
-                    child: Icon(Icons.person, color: Colors.grey),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // SUMMARY CARD
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      icon: Icons.event,
-                      title: '0',
-                      subtitle: 'Jadwal Hari Ini',
-                      color: Colors.blue,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _buildSummaryCard(
-                      icon: Icons.assignment_late,
-                      title: '0',
-                      subtitle: 'Tugas Belum\nSelesai',
-                      color: Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // JADWAL
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                children: [
-                  Text(
-                    'Jadwal Hari Ini',
-
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  TextButton(
-                    onPressed: () {
-                      onTabChange(1);
-                    },
-
-                    child: const Text('Lihat Semua'),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
 
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 48,
-                      color: Colors.grey,
+                    // HEADER
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                          children: [
+                            Text(
+                              'Selamat Datang,',
+
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+
+                            Text(
+                              namaUser.isEmpty ? 'Mahasiswa' : namaUser,
+
+                              style: GoogleFonts.poppins(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1A58B7),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        CircleAvatar(
+                          radius: 24,
+
+                          backgroundColor: const Color(0xFFE0E0E0),
+
+                          backgroundImage:
+                              fotoProfil != null && fotoProfil!.isNotEmpty
+                              ? NetworkImage(
+                                  "http://192.168.1.3:3000/uploads/$fotoProfil",
+                                )
+                              : null,
+
+                          child: fotoProfil == null || fotoProfil!.isEmpty
+                              ? const Icon(Icons.person, color: Colors.grey)
+                              : null,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // SUMMARY CARD
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSummaryCard(
+                            icon: Icons.event,
+                            title: jadwalHariIni.length.toString(),
+                            subtitle: 'Jadwal Hari Ini',
+                            color: Colors.blue,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: _buildSummaryCard(
+                            icon: Icons.assignment_late,
+                            title: tugasBelumSelesai.length.toString(),
+                            subtitle: 'Tugas Belum\nSelesai',
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // JADWAL
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                      children: [
+                        Text(
+                          'Jadwal Hari Ini',
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
+                        TextButton(
+                          onPressed: () {
+                            widget.onTabChange(1);
+                          },
+
+                          child: const Text('Lihat Semua'),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 12),
 
+                    jadwalHariIni.isEmpty
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                Text(
+                                  'Belum Ada Jadwal',
+
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                Text(
+                                  'Tambahkan jadwal baru untuk mulai mengatur aktivitas kuliah.',
+
+                                  textAlign: TextAlign.center,
+
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            children: jadwalHariIni.take(3).map((jadwal) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+
+                                child: _buildScheduleCard(
+                                  jam:
+                                      '${jadwal.jamMulai} - ${jadwal.jamSelesai}',
+
+                                  matkul: jadwal.namaMatkul,
+
+                                  ruangan: jadwal.ruangan,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+
+                    const SizedBox(height: 32),
+
+                    // TUGAS
                     Text(
-                      'Belum Ada Jadwal',
+                      'Deadline Terdekat',
 
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-
-                    const SizedBox(height: 6),
-
-                    Text(
-                      'Tambahkan jadwal baru untuk mulai mengatur aktivitas kuliah.',
-
-                      textAlign: TextAlign.center,
-
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // TUGAS
-              Text(
-                'Deadline Terdekat',
-
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-
-                child: Column(
-                  children: [
-                    const Icon(Icons.task_alt, size: 48, color: Colors.grey),
 
                     const SizedBox(height: 12),
 
-                    Text(
-                      'Belum Ada Tugas',
+                    tugasBelumSelesai.isEmpty
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
 
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
 
-                    const SizedBox(height: 6),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.task_alt,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
 
-                    Text(
-                      'Tambahkan tugas untuk melihat deadline dan pengingat.',
+                                const SizedBox(height: 12),
 
-                      textAlign: TextAlign.center,
+                                Text(
+                                  'Belum Ada Tugas',
 
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey,
-                      ),
-                    ),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                Text(
+                                  'Tambahkan tugas untuk melihat deadline dan pengingat.',
+
+                                  textAlign: TextAlign.center,
+
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            children: deadlineTerdekat.take(3).map((tugas) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+
+                                child: _buildTaskCard(
+                                  title: tugas.judul,
+
+                                  desc: tugas.deskripsi ?? '-',
+
+                                  deadline: tugas.deadline,
+                                ),
+                              );
+                            }).toList(),
+                          ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
