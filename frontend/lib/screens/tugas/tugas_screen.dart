@@ -416,12 +416,46 @@ class _TugasScreenState extends State<TugasScreen> {
                                               ),
 
                                               ElevatedButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    daftarTugas.remove(tugas);
-                                                  });
+                                                onPressed: () async {
+                                                  try {
+                                                    await TugasService()
+                                                        .hapusTugas(tugas.id!);
 
-                                                  Navigator.pop(context);
+                                                    if (!mounted) return;
+
+                                                    Navigator.pop(context);
+
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          "Tugas berhasil dihapus",
+                                                        ),
+                                                      ),
+                                                    );
+
+                                                    getTugas();
+                                                  } catch (e) {
+                                                    if (!mounted) return;
+
+                                                    Navigator.pop(context);
+
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          e
+                                                              .toString()
+                                                              .replaceFirst(
+                                                                "Exception: ",
+                                                                "",
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }
                                                 },
 
                                                 style: ElevatedButton.styleFrom(
