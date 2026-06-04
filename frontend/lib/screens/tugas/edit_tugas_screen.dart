@@ -107,7 +107,26 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
   }
 
   Future<void> simpan() async {
-    if (selectedMatkul == null) return;
+    if (selectedMatkul == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pilih mata kuliah')));
+      return;
+    }
+
+    if (judulController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Judul tugas wajib diisi')));
+      return;
+    }
+
+    if (selectedDeadline == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pilih deadline')));
+      return;
+    }
 
     try {
       final tugas = TugasModel(
@@ -117,11 +136,11 @@ class _EditTugasScreenState extends State<EditTugasScreen> {
 
         namaMatkul: selectedMatkul!.nama,
 
-        judul: judulController.text,
+        judul: judulController.text.trim(),
 
         deskripsi: deskripsiController.text.trim().isEmpty
             ? null
-            : deskripsiController.text,
+            : deskripsiController.text.trim(),
 
         deadline: deadlineText,
 
