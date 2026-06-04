@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/jadwal_model.dart';
 import '../../services/jadwal_service.dart';
+import '../../services/matkul_service.dart';
 
 class EditJadwalScreen extends StatefulWidget {
   final JadwalModel jadwal;
@@ -19,11 +20,9 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
 
   bool isLoading = false;
 
-  final List<String> daftarMatkul = [
-    'Pemrograman Mobile',
-    'Basis Data',
-    'Struktur Data',
-  ];
+  final List<String> daftarMatkul = [];
+
+  bool isLoadingMatkul = true;
 
   final List<String> daftarHari = [
     'Senin',
@@ -40,6 +39,24 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
 
   late TextEditingController ruanganController;
 
+  Future<void> getMatkul() async {
+    try {
+      final data = await MatkulService().getMatkul();
+
+      setState(() {
+        daftarMatkul.clear();
+
+        daftarMatkul.addAll(data.map((e) => e.nama).toSet().toList());
+
+        isLoadingMatkul = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingMatkul = false;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +72,8 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
     );
 
     ruanganController = TextEditingController(text: widget.jadwal.ruangan);
+
+    getMatkul();
   }
 
   @override
@@ -155,24 +174,29 @@ class _EditJadwalScreenState extends State<EditJadwalScreen> {
 
               const SizedBox(height: 8),
 
-              DropdownButtonFormField<String>(
-                value: selectedMatkul,
+              isLoadingMatkul
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: selectedMatkul,
 
-                items: daftarMatkul.map((matkul) {
-                  return DropdownMenuItem(value: matkul, child: Text(matkul));
-                }).toList(),
+                      items: daftarMatkul.map((matkul) {
+                        return DropdownMenuItem(
+                          value: matkul,
+                          child: Text(matkul),
+                        );
+                      }).toList(),
 
-                onChanged: (value) {
-                  setState(() {
-                    selectedMatkul = value;
-                  });
-                },
+                      onChanged: (value) {
+                        setState(() {
+                          selectedMatkul = value;
+                        });
+                      },
 
-                decoration: _inputDecoration(
-                  hint: 'Pilih Matkul',
-                  icon: Icons.menu_book,
-                ),
-              ),
+                      decoration: _inputDecoration(
+                        hint: 'Pilih Matkul',
+                        icon: Icons.menu_book,
+                      ),
+                    ),
 
               const SizedBox(height: 16),
 
