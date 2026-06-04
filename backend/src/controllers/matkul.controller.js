@@ -184,50 +184,75 @@ class MatkulController {
     }
 
     // HAPUS MATKUL
-    async hapusMatkul(
-        req,
-        res,
-    ) {
+async hapusMatkul(
+    req,
+    res,
+) {
 
-        try {
+    try {
 
-            const id =
-                Number(req.params.id);
+        const id =
+            Number(req.params.id);
 
-            await prisma.matkul
-                .delete({
+        // CEK APABILA MASIH DIPAKAI TUGAS
+        const tugasTerkait =
+            await prisma.tugas.findFirst({
 
-                    where: {
-                        id,
-                    },
+                where: {
+                    matkulId: id,
+                },
 
-                });
+            });
 
-            return res
-                .status(200)
-                .json({
-
-                    success: true,
-
-                    message: "Mata kuliah berhasil dihapus",
-
-                });
-
-        } catch (error) {
+        if (tugasTerkait) {
 
             return res
-                .status(500)
+                .status(400)
                 .json({
 
                     success: false,
 
-                    message: error.message,
+                    message:
+                        "Mata kuliah tidak dapat dihapus karena masih digunakan oleh tugas",
 
                 });
 
         }
 
+        await prisma.matkul
+            .delete({
+
+                where: {
+                    id,
+                },
+
+            });
+
+        return res
+            .status(200)
+            .json({
+
+                success: true,
+
+                message: "Mata kuliah berhasil dihapus",
+
+            });
+
+    } catch (error) {
+
+        return res
+            .status(500)
+            .json({
+
+                success: false,
+
+                message: error.message,
+
+            });
+
     }
+
+}
 
 }
 
