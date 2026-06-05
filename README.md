@@ -267,4 +267,4 @@ Seluruh fitur berhasil dijalankan tanpa error pada tahap pengujian akhir.
 
 # Lisensi
 
-Project ini dibuat untuk keperluan akademik dan pembelajaran pada mata kuliah Pengembangan Aplikasi Mobile.
+Project ini dibuat untuk keperluan akademik dan pembelajaran pada mata kuliah Software Engineering.
