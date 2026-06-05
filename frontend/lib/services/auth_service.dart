@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
 class AuthService {
-  static const String baseUrl = "http://192.168.1.3:3000/api";
+  static const String baseUrl = "http://192.168.1.8:3000/api";
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
@@ -22,6 +22,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setString("token", data["data"]["token"]);
+      await prefs.setString("role", data["data"]["user"]["role"]);
     }
 
     return data;

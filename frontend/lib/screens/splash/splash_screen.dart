@@ -1,8 +1,10 @@
 import 'dart:async';
-import '../auth/login_screen.dart';
-import '../main/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../auth/login_screen.dart';
+import '../main/main_screen.dart';
+import '../main/admin_main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,14 +26,22 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final token = prefs.getString("token");
 
+    final role = prefs.getString("role");
+
     await Future.delayed(const Duration(seconds: 2));
 
     if (token != null) {
-      Navigator.pushReplacement(
-        context,
-
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
+      if (role == "admin") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
     } else {
       Navigator.pushReplacement(
         context,

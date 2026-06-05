@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'register_screen.dart';
 import '../main/main_screen.dart';
+import '../main/admin_main_screen.dart';
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -42,18 +44,18 @@ class _LoginScreenState extends State<LoginScreen> {
         passwordController.text,
       );
 
-      if (response["success"]) {
-        ScaffoldMessenger.of(
+      final role = response["data"]["user"]["role"];
+
+      if (role == "admin") {
+        Navigator.pushReplacement(
           context,
-        ).showSnackBar(const SnackBar(content: Text("Login berhasil")));
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+        );
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainScreen()),
         );
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(response["message"])));
       }
     } catch (e) {
       ScaffoldMessenger.of(
