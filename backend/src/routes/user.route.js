@@ -29,6 +29,16 @@ router.get(
 
 );
 
+router.get(
+
+    "/all",
+
+    authMiddleware,
+
+    userController.getAllUser,
+
+);
+
 router.patch(
 
     "/change-password",
