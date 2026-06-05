@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/tugas_model.dart';
 
 class TugasService {
-  static const String baseUrl = "http://192.168.1.3:3000/api/tugas";
+  static const String baseUrl = "http://192.168.1.8:3000/api/tugas";
 
   Future<List<TugasModel>> getTugas() async {
     final prefs = await SharedPreferences.getInstance();

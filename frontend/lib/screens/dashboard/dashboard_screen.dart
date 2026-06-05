@@ -165,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           backgroundImage:
                               fotoProfil != null && fotoProfil!.isNotEmpty
                               ? NetworkImage(
-                                  "http://192.168.1.3:3000/uploads/$fotoProfil",
+                                  "http://192.168.1.8:3000/uploads/$fotoProfil",
                                 )
                               : null,
 

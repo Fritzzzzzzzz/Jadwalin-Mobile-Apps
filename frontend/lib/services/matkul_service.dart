@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/matkul_model.dart';
 
 class MatkulService {
-  static const String baseUrl = "http://192.168.1.3:3000/api/matkul";
+  static const String baseUrl = "http://192.168.1.8:3000/api/matkul";
 
   // GET
   Future<List<MatkulModel>> getMatkul() async {

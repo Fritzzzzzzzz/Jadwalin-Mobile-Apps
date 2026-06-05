@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/jadwal_model.dart';
 
 class JadwalService {
-  static const String baseUrl = "http://192.168.1.3:3000/api/jadwal";
+  static const String baseUrl = "http://192.168.1.8:3000/api/jadwal";
 
   Future<List<JadwalModel>> getJadwal() async {
     final prefs = await SharedPreferences.getInstance();
