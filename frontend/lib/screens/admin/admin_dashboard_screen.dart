@@ -30,8 +30,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print(e);
-
       setState(() {
         isLoading = false;
       });
