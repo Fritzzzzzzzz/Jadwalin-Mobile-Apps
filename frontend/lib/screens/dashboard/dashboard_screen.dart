@@ -165,7 +165,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           backgroundImage:
                               fotoProfil != null && fotoProfil!.isNotEmpty
                               ? NetworkImage(
-                                  "http://192.168.1.8:3000/uploads/$fotoProfil",
+                                  // fotoProfil sudah berupa full URL Cloudinary
+                                  fotoProfil!,
                                 )
                               : null,
 

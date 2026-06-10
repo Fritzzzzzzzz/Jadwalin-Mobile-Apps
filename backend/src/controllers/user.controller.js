@@ -5,11 +5,13 @@ const {
 const prisma =
     new PrismaClient();
 
-const fs = require("fs");
-
-const path = require("path");
-
 const bcrypt = require("bcryptjs");
+
+const {
+    uploadToCloudinary,
+    deleteFromCloudinary,
+    extractPublicId,
+} = require("../services/cloudinary.service");
 
 class UserController {
 
@@ -181,105 +183,49 @@ async uploadFotoProfil(
     try {
 
         if (!req.file) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "File foto wajib dipilih",
+                });
+        }
 
-    return res
-        .status(400)
-        .json({
-
-            success: false,
-
-            message: "File foto wajib dipilih",
-
+        // Ambil foto lama untuk dihapus dari Cloudinary
+        const userLama = await prisma.user.findUnique({
+            where: { id: req.user.id },
         });
 
-}
-
-const userLama =
-
-    await prisma.user.findUnique({
-
-        where: {
-            id: req.user.id,
-        },
-
-    });
-
-if (
-    userLama?.fotoProfil
-) {
-
-    const oldPath =
-
-        path.join(
-
-            __dirname,
-
-            "../../uploads",
-
-            userLama.fotoProfil,
-
+        // Upload foto baru ke Cloudinary (dari buffer memoryStorage)
+        const { url, publicId } = await uploadToCloudinary(
+            req.file.buffer
         );
 
-    if (
-        fs.existsSync(
-            oldPath
-        )
-    ) {
+        // Simpan URL Cloudinary ke database
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { fotoProfil: url },
+            select: {
+                id: true,
+                nama: true,
+                email: true,
+                fotoProfil: true,
+                role: true,
+            },
+        });
 
-        fs.unlinkSync(
-            oldPath
-        );
-
-    }
-
-}
-
-const updatedUser =
-
-    await prisma.user.update({
-
-        where: {
-            id: req.user.id,
-        },
-
-        data: {
-
-            fotoProfil:
-
-                req.file.filename,
-
-        },
-
-        select: {
-
-            id: true,
-
-            nama: true,
-
-            email: true,
-
-            fotoProfil: true,
-
-            role: true,
-
-        },
-
-    });
+        // Hapus foto lama dari Cloudinary (non-blocking)
+        if (userLama?.fotoProfil) {
+            const oldPublicId = extractPublicId(userLama.fotoProfil);
+            deleteFromCloudinary(oldPublicId);
+        }
 
         return res
             .status(200)
             .json({
-
                 success: true,
-
-                message:
-
-                    "Foto profil berhasil diperbarui",
-
-                user:
-
-                    updatedUser,
-
+                message: "Foto profil berhasil diperbarui",
+                user: updatedUser,
             });
 
     } catch (error) {
@@ -287,13 +233,8 @@ const updatedUser =
         return res
             .status(500)
             .json({
-
                 success: false,
-
-                message:
-
-                    error.message,
-
+                message: error.message,
             });
 
     }

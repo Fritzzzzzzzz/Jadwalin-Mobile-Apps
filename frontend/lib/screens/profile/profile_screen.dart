@@ -290,7 +290,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                         backgroundImage: user?["fotoProfil"] != null
                             ? NetworkImage(
-                                "http://192.168.1.8:3000/uploads/${user!["fotoProfil"]}",
+                                // fotoProfil sudah berupa full URL Cloudinary
+                                user!["fotoProfil"],
                               )
                             : null,
 

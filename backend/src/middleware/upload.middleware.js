@@ -1,116 +1,33 @@
-const multer =
-    require("multer");
+const multer = require("multer");
+const path = require("path");
 
-const path =
-    require("path");
+// Gunakan memoryStorage agar file disimpan di buffer RAM,
+// lalu langsung di-stream ke Cloudinary tanpa menyentuh disk
+const storage = multer.memoryStorage();
 
-const storage =
-    multer.diskStorage({
+const fileFilter = (req, file, cb) => {
+    const allowed = /jpg|jpeg|png|webp/;
 
-        destination: function(
+    const isValidExt = allowed.test(
+        path.extname(file.originalname).toLowerCase()
+    );
 
-            req,
-            file,
-            cb,
+    const isValidMime = allowed.test(file.mimetype.split("/")[1]);
 
-        ) {
+    if (isValidExt && isValidMime) {
+        cb(null, true);
+    } else {
+        cb(
+            new Error("Format file harus jpg, jpeg, png, atau webp"),
+            false
+        );
+    }
+};
 
-            cb(
-                null,
-                "uploads/",
-            );
-
-        },
-
-        filename: function(
-
-            req,
-            file,
-            cb,
-
-        ) {
-
-            const uniqueName =
-
-                Date.now() +
-
-                path.extname(
-                    file.originalname,
-                );
-
-            cb(
-
-                null,
-
-                uniqueName,
-
-            );
-
-        },
-
-    });
-
-const fileFilter =
-
-    (
-
-        req,
-        file,
-        cb,
-
-    ) => {
-
-        const allowed =
-
-            /jpg|jpeg|png/;
-
-        const valid =
-
-            allowed.test(
-
-                path.extname(
-
-                    file.originalname,
-
-                ).toLowerCase()
-
-            );
-
-        if (valid) {
-
-            cb(
-                null,
-                true,
-            );
-
-        } else {
-
-            cb(
-
-                new Error(
-                    "Format harus jpg/jpeg/png",
-                ),
-
-                false,
-
-            );
-
-        }
-
-    };
-
-module.exports =
-
-    multer({
-
-        storage,
-
-        fileFilter,
-
-        limits: {
-
-            fileSize: 5 * 1024 * 1024,
-
-        },
-
-    });
+module.exports = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // Maks 5MB
+    },
+});
