@@ -9,12 +9,12 @@ const PORT =
     3000;
 
 app.listen(
-    3000,
+    PORT,
     "0.0.0.0",
     () => {
 
         console.log(
-            "Server jalan di port 3000"
+            `Server jalan di port ${PORT}`
         );
 
     });
