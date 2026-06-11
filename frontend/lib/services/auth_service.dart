@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
+import '../config/api_config.dart';
+
 class AuthService {
-  static const String baseUrl = "http://192.168.1.8:3000/api";
+  static String get baseUrl => ApiConfig.baseUrl;
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
